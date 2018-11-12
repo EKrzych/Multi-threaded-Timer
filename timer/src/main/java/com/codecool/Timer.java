@@ -1,36 +1,60 @@
 package com.codecool;
 
-public class Timer extends Thread {
-    String timerName;
+public class Timer implements Runnable {
+    private Thread thread;
     int time;
+    boolean suspended;
+    boolean stopped;
 
-    public Timer(String timerName, String threadId) {
-        super(threadId);
-        this.timerName = timerName;
-        increment();
+    public Timer(String timerName) {
+        thread = new Thread(this, timerName);
+        suspended = false;
+        stopped = false;
+        thread.start();
+
     }
 
-    public void start() {
-        this.time = 0;
+    public String check() {
+        return "Name: " + thread.getName() + ", ThreadId: " + thread.getId() + ", Seconds: " + this.time;
     }
 
-    public int check() {
-        return this.time;
-    }
-
-    private void increment() {
-        try {
-            this.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            System.out.println(this.timerName + "received interrupt while sleeping");
-            return;
+   public void run() {
+        while(true) {
+            try {
+                thread.sleep(1000);
+                this.time++;
+                synchronized (this) {
+                    while (suspended) {
+                        wait();
+                    }
+                    if(stopped) {
+                        break;
+                    }
+                }
+            } catch (InterruptedException e) {
+                System.out.println(thread.getName() + " received interrupt while sleeping");
+            }
         }
-        this.time++;
     }
 
-    public void stopThread(){
-        this.interrupt();
-
+    public Thread getThread() {
+        return thread;
     }
+
+    synchronized void mystop() {
+        stopped = true;
+        suspended = false;
+        notify();
+    }
+
+    synchronized void mysuspend() {
+        suspended = true;
+    }
+
+    synchronized void myresume() {
+        suspended = false;
+        notify();
+    }
+
+
 }
